@@ -4,6 +4,8 @@ body {
     padding: 0;
     background-color: #595CE2; /* Azul de fondo */
     color: #FAFAFA; /* Blanco para texto y bordes */
+    
+    
 }
 
 /* */
@@ -74,13 +76,17 @@ body {
     font-size: 28px; /* Ajustado: Tamaño de fuente más grande */
     font-weight: bold;
     margin-bottom: 5px; /* Ajustado: Menor margen inferior */
+    text-align: center; /* Centrar el título */
+    width: 100%; /* Asegurar que ocupe el ancho completo */
+
+
 }
 
 #divider {
     width: 2px;
     background-color: #FAFAFA;
     border-radius: 5px;
-    margin: 10px 20px; /* Ajustado: Menor distancia de la línea al contenido superior e inferior */
+    margin: 10px auto; /* Ajustado: Menor distancia de la línea al contenido superior e inferior */
 }
 
 #form-container {
