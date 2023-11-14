@@ -20,23 +20,22 @@
     <div id="main-container">
         <div id="horarios-container">
             <div id="horarios-title">HORARIOS</div>
-            <p>Lunes a Viernes: 8 a 20 hs</p>
-            <img src="/icon.png" alt="Descripción de la imagen" style="width: 100%; height: auto;">
-
-        </div>
+            <p id="diasSemana">Cargando horario...</p>
+            <img src="/icon.png" alt=" " style="width: 100%; height: auto;">
+    </div>
 
         <div id="divider"></div>
 
         <div id="form-container">
             <!-- Campos de origen y destino -->
             <div class="input-container">
-                <label for="origin">Origen: </label>
+                <label for="origin">ORIGEN: </label>
                 <input type="text" id="origin" placeholder="Escribe una dirección o haz clic en el mapa">
                 <button onclick="selectOnMap('origin')">Seleccionar en el mapa</button>
             </div>
 
             <div class="input-container">
-                <label for="destination">Destino: </label>
+                <label for="destination">DESTINO: </label>
                 <input type="text" id="destination" placeholder="Escribe una dirección o haz clic en el mapa">
                 <button onclick="selectOnMap('destination')">Seleccionar en el mapa</button>
             </div>
@@ -64,7 +63,21 @@
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-      var map = L.map('map').setView([0, 0], 2);
+
+const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTp_W9ID3EJ46FETfWNVhBbLD4Qmcin8X_TMEXT4LyDifUx72-IkMknHdNPEEPtqVx4Gf9yoRoBfyb_/pub?gid=0&single=true&output=csv';
+        const diasSemana = document.getElementById('diasSemana');
+
+        // Cargar el texto del horario desde la hoja de cálculo publicada
+        fetch(sheetURL)
+            .then(response => response.text())
+            .then(data => {
+                // Haz algo con los datos (parsing, manipulación, etc.)
+                diasSemana.textContent = data;
+            })
+            .catch(error => console.error('Error al cargar el horario:', error));
+
+
+      var map = L.map('map').setView([-32.95, -60.65], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
@@ -164,15 +177,15 @@ function sendWhatsAppMessage(originCoords, destinationCoords) {
     geocodeCoordinates(originCoords, function (originAddress) {
         geocodeCoordinates(destinationCoords, function (destinationAddress) {
             // Formar el mensaje de WhatsApp
-            var mensaje = 'Hola, quería pedir un cadete al ' + originAddress + ' hasta ' + destinationAddress;
+            var mensaje = 'Hola, quería enviar un pedido desde ' + originAddress + ' hasta ' + destinationAddress;
 
             // Agregar observaciones al mensaje si las hay
             if (observations) {
-                mensaje += '. Observaciones: ' + observations;
+                mensaje += '. Te dejo estas indicaciones que pueden ser de ayuda: ' + observations;
             }
 
             // Número de WhatsApp y URL para abrir en WhatsApp
-            var numeroWhatsApp = '3466550598';
+            var numeroWhatsApp = '+54 9 3466550598';
             var urlWhatsApp = 'https://api.whatsapp.com/send?phone=' + numeroWhatsApp + '&text=' + encodeURIComponent(mensaje);
 
             // Abrir enlace de WhatsApp
