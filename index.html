@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CADETERIA</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <link rel="manifest" href="/manifest.json">
+
+    <link rel="icon" href="/MEDIA/icon_-_copia-removebg-preview.png" type="image/png">
+
+
+</head>
+<body>
+    <div id="navbar">
+        <h1>CADETERIA</h1>
+    </div>
+
+    <div id="main-container">
+        <div id="horarios-container">
+            <div id="horarios-title">HORARIOS</div>
+            <p>Lunes a Viernes: 8 a 20 hs</p>
+            <img src="/MEDIA/icon.png" alt="Descripción de la imagen" style="width: 100%; height: auto;">
+
+        </div>
+
+        <div id="divider"></div>
+
+        <div id="form-container">
+            <!-- Campos de origen y destino -->
+            <div class="input-container">
+                <label for="origin">Origen: </label>
+                <input type="text" id="origin" placeholder="Escribe una dirección o haz clic en el mapa">
+                <button onclick="selectOnMap('origin')">Seleccionar en el mapa</button>
+            </div>
+
+            <div class="input-container">
+                <label for="destination">Destino: </label>
+                <input type="text" id="destination" placeholder="Escribe una dirección o haz clic en el mapa">
+                <button onclick="selectOnMap('destination')">Seleccionar en el mapa</button>
+            </div>
+
+            <hr>
+
+            <!-- Mapa -->
+            <div id="map"></div>
+
+            <div class="button-container">
+                <button onclick="simulate()">SIMULAR</button>
+                <button class="clear-button" onclick="clearMarkers()">LIMPIAR</button>
+            </div>
+
+            <!-- Botón Simular y Resultado -->
+            <p id="cost-label">Costo:</p>
+            <p id="cost-result"></p>
+            <div id="observations-container">
+                <label for="observations">Añadir observaciones:</label>
+                <textarea id="observations" rows="4"></textarea>
+            </div>
+            <button id="pedir-button" onclick="sendWhatsAppMessage()">PEDIR</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+      var map = L.map('map').setView([0, 0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+var markers = {};
+
+map.on('click', function (e) {
+    var activeInput = document.querySelector('.input-container.active input');
+    if (activeInput) {
+        activeInput.value = e.latlng.lat + ', ' + e.latlng.lng;
+        placeMarker(activeInput, e.latlng);
+    }
+});
+
+function selectOnMap(inputId) {
+    var input = document.getElementById(inputId);
+    input.parentElement.classList.add('active');
+}
+
+function calculateDistance(origin, destination) {
+    var lat1 = origin.lat;
+    var lon1 = origin.lng;
+    var lat2 = destination.lat;
+    var lon2 = destination.lng;
+
+    var R = 6371; // Radio de la Tierra en kilómetros
+    var dLat = deg2rad(lat2 - lat1);
+    var dLon = deg2rad(lon2 - lon1);
+
+    var a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    var distance = R * c;
+
+    return distance;
+}
+
+// Ocultar el botón PEDIR al principio
+document.getElementById('pedir-button').style.display = 'none';
+
+function simulate() {
+    var originInput = document.getElementById('origin');
+    var destinationInput = document.getElementById('destination');
+
+    var origin = originInput.value;
+    var destination = destinationInput.value;
+
+    if (origin && destination) {
+        geocodeAddress(origin, function (originCoords) {
+            geocodeAddress(destination, function (destinationCoords) {
+                placeMarker(originInput, originCoords);
+                placeMarker(destinationInput, destinationCoords);
+
+                var distance = calculateDistance(originCoords, destinationCoords);
+                var cost = Math.ceil(distance * 1000 / 5) * 5; // Redondear hacia arriba en múltiplos de 5
+
+                // Mostrar el resultado y el campo de observaciones
+                document.getElementById('cost-label').style.display = 'block';
+                document.getElementById('cost-result').style.display = 'block';
+                document.getElementById('cost-result').innerText = '$' + cost.toFixed(0);
+                document.getElementById('observations-container').style.display = 'block';
+
+                map.fitBounds([originCoords, destinationCoords]);
+
+                // Limpiar botón PEDIR si existe
+                var pedirButton = document.getElementById('pedir-button');
+                if (pedirButton) {
+                    document.getElementById('form-container').removeChild(pedirButton);
+                }
+
+                // Mostrar botón PEDIR después de la simulación
+                pedirButton = document.createElement('button');
+                pedirButton.id = 'pedir-button';
+                pedirButton.innerText = 'PEDIR';
+                pedirButton.onclick = function () {
+                    sendWhatsAppMessage(originCoords, destinationCoords);
+                };
+
+                document.getElementById('form-container').appendChild(pedirButton);
+            });
+        });
+    } else {
+        alert('Por favor, selecciona tanto el origen como el destino.');
+    }
+}
+
+ // Mostrar botón PEDIR después de la simulación
+    pedirButton.style.display = 'block';
+
+function sendWhatsAppMessage(originCoords, destinationCoords) {
+    var observations = document.getElementById('observations').value;
+
+    // Geocodificar inversamente para obtener las direcciones
+    geocodeCoordinates(originCoords, function (originAddress) {
+        geocodeCoordinates(destinationCoords, function (destinationAddress) {
+            // Formar el mensaje de WhatsApp
+            var mensaje = 'Hola, quería pedir un cadete al ' + originAddress + ' hasta ' + destinationAddress;
+
+            // Agregar observaciones al mensaje si las hay
+            if (observations) {
+                mensaje += '. Observaciones: ' + observations;
+            }
+
+            // Número de WhatsApp y URL para abrir en WhatsApp
+            var numeroWhatsApp = '3466550598';
+            var urlWhatsApp = 'https://api.whatsapp.com/send?phone=' + numeroWhatsApp + '&text=' + encodeURIComponent(mensaje);
+
+            // Abrir enlace de WhatsApp
+            window.open(urlWhatsApp);
+        });
+    });
+}
+
+function geocodeCoordinates(coords, callback) {
+    var apiUrl = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + coords.lat + '&lon=' + coords.lng;
+
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.address) {
+                var address = data.address;
+                var formattedAddress = formatAddress(address);
+                callback(formattedAddress);
+            } else {
+                alert('No se pudo obtener la dirección para las coordenadas: ' + coords.lat + ', ' + coords.lng);
+            }
+        })
+        .catch(error => {
+            console.error('Error al geocodificar las coordenadas:', error);
+        });
+}
+
+function formatAddress(address) {
+    // Formatear la dirección a la calle, número y ciudad
+    var formattedAddress = '';
+    if (address.road) {
+        formattedAddress += address.road;
+    }
+    if (address.house_number) {
+        formattedAddress += ' ' + address.house_number;
+    }
+    if (address.city) {
+        formattedAddress += ', ' + address.city;
+    }
+
+    return formattedAddress;
+}
+
+function clearMarkers() {
+    for (var key in markers) {
+        map.removeLayer(markers[key]);
+    }
+    markers = {};
+    document.getElementById('cost-label').style.display = 'none';
+    document.getElementById('cost-result').style.display = 'none';
+    document.getElementById('observations-container').style.display = 'none';
+
+    // Limpiar contenido de los cuadros de texto
+    document.getElementById('origin').value = '';
+    document.getElementById('destination').value = '';
+    document.getElementById('observations').value = '';
+
+    // Limpiar botón PEDIR si existe
+    var pedirButton = document.getElementById('pedir-button');
+    if (pedirButton) {
+        document.getElementById('form-container').removeChild(pedirButton);
+    }
+}
+
+function placeMarker(input, coords) {
+    var inputContainer = input.parentElement;
+    inputContainer.classList.remove('active');
+
+    var marker = markers[input.id];
+
+    if (marker) {
+        map.removeLayer(marker);
+    }
+
+    markers[input.id] = L.marker(coords).addTo(map);
+}
+
+function geocodeAddress(address, callback) {
+    var apiUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address);
+
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.length > 0) {
+                var coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+                callback(coords);
+            } else {
+                alert('No se pudo encontrar la dirección: ' + address);
+            }
+        })
+        .catch(error => {
+            console.error('Error al geocodificar la dirección:', error);
+        });
+}
+
+function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+}
+
+
+
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(function(registration) {
+        console.log('Service Worker registrado con éxito:', registration);
+      })
+      .catch(function(error) {
+        console.log('Error al registrar el Service Worker:', error);
+      });
+  }
+
+
+
+
+</script>
+
+</body>
+</html>
